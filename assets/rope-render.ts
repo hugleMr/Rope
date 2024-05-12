@@ -5,45 +5,51 @@
 // Learn life-cycle callbacks:
 //  - https://docs.cocos.com/creator/2.4/manual/en/scripting/life-cycle-callbacks.html
 
+import Logic from "./logic";
 import RopeLinePoint from "./rope-line-point";
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
 export default class RopeRender extends cc.Component {
+    private ropePointList: RopeLinePoint[] = [];
     onLoad() {
         this.initRope();
     }
 
-    updateRenderPonits() {
-        var e = h(t, this.minPointDis, 0.1),
-            o = this.createRopePointList(e);
-        (this.ropePointList = o),
-            this.updateGridSize(cc.size(3, this.ropePointList.length));
+    updateRenderPonits(points: cc.Vec2[]) {
+        if (points.length <= 0) return;
+        var listPoints = Logic.catmullRomSpline(points, 10, 0.1);
+        // console.log("listPoints : ", listPoints);
+        this.ropePointList = this.createRopePointList(listPoints);
+        this.updateGridSize(cc.size(3, this.ropePointList.length));
     }
+
     onEnable() {
-        t.prototype.onEnable.call(this), this.updateSimulator();
+        // super.onEnable();
+        this.updateSimulator();
     }
-    updateGridSize(t) {
-        (this._gridSize = t), this.updateAssembler();
+    updateGridSize(size: cc.Size) {
+        this._gridSize = size;
+        this.updateAssembler();
     }
     updateAssembler() {
-        this._assembler && this._assembler.updateComData(this),
-            this._assembler && this._assembler.updateRenderData(this);
+        // this._assembler && this._assembler.updateComData(this),
+        //     this._assembler && this._assembler.updateRenderData(this);
     }
     _resetAssembler() {
-        var t = new c.default();
-        (this._assembler = t), t.init(this);
+        // var t = new c.default();
+        // (this._assembler = t), t.init(this);
     }
     _updateMaterial() {
-        var t = this.getMaterial(0);
-        t &&
-            (t.define("CC_USE_MODEL", 1),
-            this.ropeTexture && t.setProperty("texture", this.ropeTexture));
+        // var t = this.getMaterial(0);
+        // t &&
+        //     (t.define("CC_USE_MODEL", 1),
+        //     this.ropeTexture && t.setProperty("texture", this.ropeTexture));
     }
     updateMaterial() {
-        this.ropeTexture &&
-            (this._updateMaterial(), (this._initedMaterial = !0));
+        // this.ropeTexture &&
+        //     (this._updateMaterial(), (this._initedMaterial = !0));
     }
     getRopePointList() {
         return this.ropePointList;
@@ -51,36 +57,90 @@ export default class RopeRender extends cc.Component {
     initRope() {
         this.updateRenderPonits(this.ropeLinePoint);
     }
-    createRopePointList(t) {
-        for (var e = [], o = 0; o < t.length; o++) {
-            var r = t[o] || cc.v2(0, 0),
-                i = t[o - 1] || cc.v2(0, 0),
-                n = t[o + 1] || cc.v2(0, 0);
-            Math.atan2(n.y - i.y, n.x - i.y),
-                o == t.length - 1 &&
-                    (Math.atan2(r.y - i.y, r.x - i.x), (n = r));
-            var c = n.sub(i),
-                s = c.mag(),
-                p = c.x / s,
-                a = c.y / s,
-                h = cc.v2(r.x + this.ropeWidth * a, r.y - this.ropeWidth * p),
-                d = cc.v2(r.x - this.ropeWidth * a, r.y + this.ropeWidth * p),
-                l = new u(r, h, d);
-            l.calculateDis(e[e.length - 1]);
-            var f = Math.floor(l.len / this.ropeTexture.height),
-                y = e[e.length - 1]
-                    ? Math.floor(e[e.length - 1].len / this.ropeTexture.height)
-                    : 0;
-            if ((e.push(l), f != y)) {
-                l.repeatEnd = !0;
-                var v = new u(r, h, d);
-                v.calculateDis(e[e.length - 1]),
-                    e.push(v),
-                    (v.repeatStart = !0);
+    createRopePointList(points: cc.Vec2[]) {
+        let repePointList: RopeLinePoint[] = [];
+
+        for (let i = 0; i < points.length; i++) {
+            const curRopePoint = points[i] || cc.v2(0, 0);
+
+            const lastRopePoint = points[i - 1] || cc.v2(0, 0);
+
+            let nextRopePoint = points[i + 1] || cc.v2(0, 0);
+
+            let radian = Math.atan2(
+                nextRopePoint.y - lastRopePoint.y,
+                nextRopePoint.x - lastRopePoint.y
+            );
+
+            if (i == points.length - 1) {
+                radian = Math.atan2(
+                    curRopePoint.y - lastRopePoint.y,
+                    curRopePoint.x - lastRopePoint.x
+                );
+
+                nextRopePoint = curRopePoint;
+            }
+
+            const dir = nextRopePoint.sub(lastRopePoint);
+
+            const dis = dir.mag();
+
+            const unitDx = dir.x / dis;
+
+            const unitDy = dir.y / dis;
+
+            // Get two positions from the left and right points of the rope to keep the width consistent
+
+            let left = cc.v2(
+                curRopePoint.x + this.ropeWidth * unitDy,
+                curRopePoint.y - this.ropeWidth * unitDx
+            );
+
+            let right = cc.v2(
+                curRopePoint.x - this.ropeWidth * unitDy,
+                curRopePoint.y + this.ropeWidth * unitDx
+            );
+
+            // Calculate the current rope distance
+
+            let ropePoint = new RopeLinePoint(curRopePoint, left, right);
+
+            ropePoint.calculateDis(repePointList[repePointList.length - 1]);
+
+            let index = Math.floor(ropePoint.len / this.ropeTexture.height);
+
+            let lastIndex = repePointList[repePointList.length - 1]
+                ? Math.floor(
+                      repePointList[repePointList.length - 1].len /
+                          this.ropeTexture.height
+                  )
+                : 0;
+
+            repePointList.push(ropePoint);
+
+            if (index != lastIndex) {
+                // Here is to be 0.9 ~ 0.1 when sampling in UV, add 1 and 0 in the middle, transition
+                ropePoint.repeatEnd = true;
+
+                let tempRopePoint = new RopeLinePoint(
+                    curRopePoint,
+                    left,
+                    right
+                );
+
+                tempRopePoint.calculateDis(
+                    repePointList[repePointList.length - 1]
+                ); // Calculation distance
+
+                repePointList.push(tempRopePoint);
+                // Here is to be 0.9 ~ 0.1 when sampling in UV, add 1 and 0 in the middle, transition
+                tempRopePoint.repeatStart = true;
             }
         }
-        return e;
+
+        return repePointList;
     }
+
     getPointList() {
         for (var t = [], e = this.ropePointList, o = 0; o < e.length; o++) {
             var r = e[o],
@@ -93,12 +153,8 @@ export default class RopeRender extends cc.Component {
     }
     updateSimulator() {}
     update() {
-        this._initedMaterial || this.updateMaterial(), this.setVertsDirty();
+        //this._initedMaterial || this.updateMaterial(), this.setVertsDirty();
     }
-
-    initRope() {}
-
-    updateMaterial() {}
 
     //===========prop
 
@@ -106,7 +162,7 @@ export default class RopeRender extends cc.Component {
     get gridSize() {
         return this._gridSize;
     }
-    _gridSize: cc.Vec2 = null;
+    _gridSize: cc.Size = cc.Size.ZERO.clone();
 
     @property
     get ropeRenderType() {
@@ -115,42 +171,21 @@ export default class RopeRender extends cc.Component {
     type = 0;
 
     @property
-    get ropeWidth() {
-        return this._ropeWidth;
-    }
-    set ropeWidth(value: number) {
-        this._ropeWidth = value;
-        this.initRope();
-    }
-    _ropeWidth: number = 0;
+    ropeWidth: number = 0;
 
     @property
-    get minPointDis() {
-        return this._minPointDis;
-    }
-    set minPointDis(value: number) {
-        this._minPointDis = value;
-        this.initRope();
-    }
-    _minPointDis: number = 0;
+    minPointDis: number = 0;
 
-    @property
-    get ropeTexture() {
-        return this._ropeTexture;
-    }
-    set ropeTexture(texture: cc.Texture2D) {
-        this._ropeTexture = texture;
-        this.updateMaterial();
-    }
-    _ropeTexture: cc.Texture2D = null;
+    @property(cc.Texture2D)
+    ropeTexture: cc.Texture2D = null;
 
-    @property
+    @property([cc.Vec2])
     get ropeLinePoint() {
         return this._ropeLinePoint;
     }
-    set ropeLinePoint(point: RopeLinePoint) {
-        this._ropeLinePoint = point;
+    set ropeLinePoint(points: cc.Vec2[]) {
+        this._ropeLinePoint = points;
         this.initRope();
     }
-    _ropeLinePoint: RopeLinePoint = null;
+    _ropeLinePoint: cc.Vec2[] = [];
 }

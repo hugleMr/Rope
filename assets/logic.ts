@@ -31,7 +31,7 @@ export default class Logic {
 
     // Obtain data points based on index
 
-    static getControlPointAt(controlPoints, pos) {
+    static getControlPointAt(controlPoints: cc.Vec2[], pos: number) {
         var p = Math.min(controlPoints.length - 1, Math.max(pos, 0));
 
         return controlPoints[p];
@@ -39,12 +39,13 @@ export default class Logic {
 
     // According to the input point array, get the curve
 
-    static catmullRomSpline(points: cc.Vec2[], alpha: number): cc.Vec2[] {
+    static catmullRomSpline(
+        points: cc.Vec2[],
+        minSeg: number,
+        alpha: number
+    ): cc.Vec2[] {
         const result: cc.Vec2[] = [];
-
         result.push(points[0]);
-
-        let _minSeg = 10;
 
         for (let i = 0; i < points.length; i++) {
             let start = points[i];
@@ -55,7 +56,7 @@ export default class Logic {
 
             let dis = start.sub(end).mag();
 
-            let count = dis / _minSeg;
+            let count = Math.floor(dis / minSeg);
 
             let p0 = this.getControlPointAt(points, i - 1);
 
