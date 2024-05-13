@@ -1,17 +1,11 @@
-// Learn TypeScript:
-//  - https://docs.cocos.com/creator/2.4/manual/en/scripting/typescript.html
-// Learn Attribute:
-//  - https://docs.cocos.com/creator/2.4/manual/en/scripting/reference/attributes.html
-// Learn life-cycle callbacks:
-//  - https://docs.cocos.com/creator/2.4/manual/en/scripting/life-cycle-callbacks.html
-
 import Logic from "./logic";
+import RopeAssembler from "./rope-assembler";
 import RopeLinePoint from "./rope-line-point";
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export default class RopeRender extends cc.Component {
+export default class RopeRender extends cc.RenderComponent {
     private ropePointList: RopeLinePoint[] = [];
     onLoad() {
         this.initRope();
@@ -20,36 +14,40 @@ export default class RopeRender extends cc.Component {
     updateRenderPonits(points: cc.Vec2[]) {
         if (points.length <= 0) return;
         var listPoints = Logic.catmullRomSpline(points, 10, 0.1);
-        // console.log("listPoints : ", listPoints);
         this.ropePointList = this.createRopePointList(listPoints);
         this.updateGridSize(cc.size(3, this.ropePointList.length));
     }
 
     onEnable() {
-        // super.onEnable();
+        super.onEnable();
         this.updateSimulator();
     }
     updateGridSize(size: cc.Size) {
-        this._gridSize = size;
+        this.gridSize = size;
         this.updateAssembler();
     }
     updateAssembler() {
-        // this._assembler && this._assembler.updateComData(this),
-        //     this._assembler && this._assembler.updateRenderData(this);
+        this._assembler && this._assembler.updateComData(this),
+            this._assembler && this._assembler.updateRenderData(this);
     }
+
+    private _assembler: RopeAssembler = null;
     _resetAssembler() {
-        // var t = new c.default();
-        // (this._assembler = t), t.init(this);
+        var t = new RopeAssembler();
+        this._assembler = t;
+        t.init(this);
     }
     _updateMaterial() {
-        // var t = this.getMaterial(0);
-        // t &&
-        //     (t.define("CC_USE_MODEL", 1),
-        //     this.ropeTexture && t.setProperty("texture", this.ropeTexture));
+        var t = this.getMaterial(0);
+        t &&
+            (t.define("CC_USE_MODEL", 1),
+            this.ropeTexture && t.setProperty("texture", this.ropeTexture));
     }
+
+    private _initedMaterial = false;
     updateMaterial() {
-        // this.ropeTexture &&
-        //     (this._updateMaterial(), (this._initedMaterial = !0));
+        this.ropeTexture && this._updateMaterial();
+        this._initedMaterial = true;
     }
     getRopePointList() {
         return this.ropePointList;
@@ -153,22 +151,16 @@ export default class RopeRender extends cc.Component {
     }
     updateSimulator() {}
     update() {
-        //this._initedMaterial || this.updateMaterial(), this.setVertsDirty();
+        this._initedMaterial || this.updateMaterial(), this.setVertsDirty();
     }
 
     //===========prop
 
-    @property
-    get gridSize() {
-        return this._gridSize;
-    }
-    _gridSize: cc.Size = cc.Size.ZERO.clone();
+    @property(cc.Size)
+    gridSize: cc.Size = null;
 
     @property
-    get ropeRenderType() {
-        return this.type;
-    }
-    type = 0;
+    ropeRenderType = 0;
 
     @property
     ropeWidth: number = 0;
@@ -180,12 +172,5 @@ export default class RopeRender extends cc.Component {
     ropeTexture: cc.Texture2D = null;
 
     @property([cc.Vec2])
-    get ropeLinePoint() {
-        return this._ropeLinePoint;
-    }
-    set ropeLinePoint(points: cc.Vec2[]) {
-        this._ropeLinePoint = points;
-        this.initRope();
-    }
-    _ropeLinePoint: cc.Vec2[] = [];
+    ropeLinePoint: cc.Vec2[] = [];
 }

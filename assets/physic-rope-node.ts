@@ -1,10 +1,3 @@
-// Learn TypeScript:
-//  - https://docs.cocos.com/creator/2.4/manual/en/scripting/typescript.html
-// Learn Attribute:
-//  - https://docs.cocos.com/creator/2.4/manual/en/scripting/reference/attributes.html
-// Learn life-cycle callbacks:
-//  - https://docs.cocos.com/creator/2.4/manual/en/scripting/life-cycle-callbacks.html
-
 import RopeRender from "./rope-render";
 
 const { ccclass, property } = cc._decorator;
@@ -35,7 +28,7 @@ export default class PhysicRopeNode extends cc.Component {
         let e: cc.Node[] = [];
         const TOTAl = 20;
         for (let k = 0; k < TOTAl; k++) {
-            var pointNode = cc.instantiate(this.pointPrefab);
+            let pointNode = cc.instantiate(this.pointPrefab);
             const rig = pointNode.getComponent(cc.RigidBody);
             pointNode.x = (600 * k) / TOTAl - 300;
             pointNode.y = TOTAl * k;
@@ -51,29 +44,13 @@ export default class PhysicRopeNode extends cc.Component {
             }
             e.push(pointNode);
             if (0 !== k && TOTAl - 1 != k) {
-                // pointNode.on(
-                //     cc.Node.EventType.TOUCH_END,
-                //     () => {
-                //         for (var e = 0; e < this.lines.length; e++) {
-                //             var o = this.lines[e],
-                //                 r = o.ropePointNodes.indexOf(pointNode);
-                //             if (-1 != r) {
-                //                 pointNode.removeComponent(
-                //                     pointNode.getComponent(cc.DistanceJoint)
-                //                 );
-                //                 var n = o.ropePointNodes.slice(0, r);
-                //                 let c = o.ropePointNodes.slice(r);
-                //                 o.ropePointNodes = n;
-                //                 var s = new RoleLine();
-                //                 return (
-                //                     (s.ropePointNodes = c),
-                //                     void this.lines.push(s)
-                //                 );
-                //             }
-                //         }
-                //     },
-                //     this
-                // );
+                pointNode.on(
+                    cc.Node.EventType.TOUCH_END,
+                    () => {
+                        this.cutRope(pointNode);
+                    },
+                    this
+                );
             } else {
                 if (k == 0) {
                     e[0].x = -200;
@@ -95,6 +72,22 @@ export default class PhysicRopeNode extends cc.Component {
         n.ropePointNodes = e;
         this.lines.push(n);
     }
+
+    cutRope(pointNode: cc.Node) {
+        for (var e = 0; e < this.lines.length; e++) {
+            var line = this.lines[e];
+            const r = line.ropePointNodes.indexOf(pointNode);
+            if (-1 != r) {
+                pointNode.removeComponent(cc.DistanceJoint);
+                var n = line.ropePointNodes.slice(0, r);
+                let c = line.ropePointNodes.slice(r);
+                line.ropePointNodes = n;
+                var s = new RoleLine();
+                return (s.ropePointNodes = c), void this.lines.push(s);
+            }
+        }
+    }
+
     update() {
         for (var t = 0; t < this.lines.length; t++) {
             var e = this.lines[t];
