@@ -9,6 +9,12 @@ export class RoleLine {
     }
 }
 
+@ccclass("PointList")
+export class PointList {
+    @property(cc.Node) posA: cc.Node = null;
+    @property(cc.Node) posB: cc.Node = null;
+}
+
 @ccclass
 export default class PhysicRopeNode extends cc.Component {
     @property(cc.Node)
@@ -18,20 +24,36 @@ export default class PhysicRopeNode extends cc.Component {
     @property(cc.Node)
     ropeContent: cc.Node = null;
 
+    @property(PointList)
+    pointList: PointList[] = [];
     private lines: RoleLine[] = [];
     private renderRope: cc.Node[] = [];
 
     onLoad() {
-        cc.director.getPhysicsManager().enabled = !0;
+        cc.director.getPhysicsManager().enabled = true;
     }
+
     start() {
+        for (let obj of this.pointList) {
+            this.draw(obj.posA, obj.posB);
+        }
+    }
+
+    draw(pointA: cc.Node, pointB: cc.Node) {
+        const posA = pointA.getPosition();
+        const posB = pointB.getPosition();
+        const distance = cc.Vec2.distance(posA, posB);
+        console.log("distance : ", distance);
         let e: cc.Node[] = [];
-        const TOTAl = 20;
-        for (let k = 0; k < TOTAl; k++) {
+        const numberOfPoints = Math.ceil(distance / 32);
+        for (let k = 0; k < numberOfPoints; k++) {
             let pointNode = cc.instantiate(this.pointPrefab);
             const rig = pointNode.getComponent(cc.RigidBody);
-            pointNode.x = (600 * k) / TOTAl - 300;
-            pointNode.y = TOTAl * k;
+            var t = k / numberOfPoints;
+            const x = posA.x * (1 - t) + posB.x * t;
+            const y = posA.y * (1 - t) + posB.y * t;
+            pointNode.x = x;
+            pointNode.y = y;
             pointNode.active = true;
             pointNode.parent = this.ropeContent;
             if (0 == k) rig.type = cc.RigidBodyType.Animated;
@@ -43,7 +65,7 @@ export default class PhysicRopeNode extends cc.Component {
                 joint.distance = 40;
             }
             e.push(pointNode);
-            if (0 !== k && TOTAl - 1 != k) {
+            if (0 !== k && numberOfPoints - 1 != k) {
                 pointNode.on(
                     cc.Node.EventType.TOUCH_END,
                     () => {
@@ -52,15 +74,23 @@ export default class PhysicRopeNode extends cc.Component {
                     this
                 );
             } else {
+                pointNode.on(
+                    cc.Node.EventType.TOUCH_MOVE,
+                    function (e) {
+                        pointNode.x += e.getDeltaX();
+                        pointNode.y += e.getDeltaY();
+                    },
+                    this
+                );
                 if (k == 0) {
-                    e[0].x = -200;
-                    e[0].y = 0;
+                    e[0].x = posA.x;
+                    e[0].y = posA.y;
                     e[0].getComponent(cc.RigidBody).type =
                         cc.RigidBodyType.Static;
                     e[0].addComponent(cc.DistanceJoint);
                 } else {
-                    e[e.length - 1].x = 200;
-                    e[e.length - 1].y = 0;
+                    e[e.length - 1].x = posB.x;
+                    e[e.length - 1].y = posB.y;
                     e[e.length - 1].getComponent(cc.RigidBody).type =
                         cc.RigidBodyType.Static;
                     e[e.length - 1].addComponent(cc.DistanceJoint);

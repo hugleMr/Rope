@@ -1,4 +1,20 @@
 export default class Logic {
+    // generate point between 2 points
+    static generatePointsBetween(
+        startPoint: cc.Vec2,
+        endPoint: cc.Vec2,
+        numberOfPoints: number
+    ) {
+        var points = [];
+        for (var i = 0; i <= numberOfPoints; i++) {
+            var t = i / numberOfPoints;
+            var x = startPoint.x * (1 - t) + endPoint.x * t;
+            var y = startPoint.y * (1 - t) + endPoint.y * t;
+            points.push(cc.v2(x, y)); // Assuming you're using Cocos Creator's cc.v2 for 2D vectors
+        }
+        return points;
+    }
+
     //Obtain interpolation
 
     static cardinalSplineAt(p0, p1, p2, p3, tension, t) {
